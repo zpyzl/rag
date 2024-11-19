@@ -1,7 +1,11 @@
+from http.client import responses
+
 import openai
 import gradio as gr
 import os
 import logging
+
+import requests
 import tiktoken
 
 from enum import Enum
@@ -13,20 +17,22 @@ from jinja2 import Template
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+try:
+    OPENAI_KEY = open("/run/secrets/OPENAI_API_KEY").read().strip("\n")
+    HF_TOKEN = open("/run/secrets/HF_TOKEN").read().strip("\n")
+    PROMPT_TOKEN_LIMIT = int(os.getenv("PROMPT_TOKEN_LIMIT", 32768))
 
-OPENAI_KEY = open("/run/secrets/OPENAI_API_KEY").read().strip("\n")
-HF_TOKEN = open("/run/secrets/HF_TOKEN").read().strip("\n")
-PROMPT_TOKEN_LIMIT = int(os.getenv("PROMPT_TOKEN_LIMIT", 32768))
+    HF_TOKENIZER = AutoTokenizer.from_pretrained(os.getenv("HF_MODEL"))
+    # https://cookbook.openai.com/examples/how_to_count_tokens_with_tiktoken
+    OAI_TOKENIZER = tiktoken.get_encoding("cl100k_base")
 
-HF_TOKENIZER = AutoTokenizer.from_pretrained(os.getenv("HF_MODEL"))
-# https://cookbook.openai.com/examples/how_to_count_tokens_with_tiktoken
-OAI_TOKENIZER = tiktoken.get_encoding("cl100k_base")
-
-HF_CLIENT = AsyncInferenceClient(
-    os.getenv("HF_URL"),
-    token=HF_TOKEN
-)
-OAI_CLIENT = openai.AsyncClient(api_key=OPENAI_KEY)
+    HF_CLIENT = AsyncInferenceClient(
+        os.getenv("HF_URL"),
+        token=HF_TOKEN
+    )
+    OAI_CLIENT = openai.AsyncClient(api_key=OPENAI_KEY)
+except Exception as e:
+    logger.exception(e)
 
 HF_GENERATE_KWARGS = {
     'temperature': max(float(os.getenv("TEMPERATURE")), 1e-2),
@@ -129,6 +135,44 @@ async def generate_openai(
             **OAI_GENERATE_KWARGS, 
             stream=True
         )
+        output = ""
+        async for chunk in stream:
+            if chunk.choices[0].delta.content:
+                output += chunk.choices[0].delta.content
+                yield output
+
+    except Exception as e:
+        raise gr.Error(str(e))
+
+async def generate_ollama(
+        template: Template, query: str, docs: list[str], history: list[list]
+    ) -> AsyncGenerator[str, None]:
+    """
+    Generate a sequence of tokens based on a given prompt and history using OpenAI API.
+    """
+    formatted_prompt = format_prompt_openai(template, query, docs)
+
+    # history is not used yet
+    try:
+        param = f"""
+        {
+        "model": "qwen2",
+        "prompt": {formatted_prompt}
+    }'
+        """
+        response = requests.post("http://localhost:11434/api/generate", json=param)
+        if response.status_code == 200:
+            for chunk in response.iter_content(chunk_size=1024):
+                if chunk:
+                    print(chunk.decode('utf-8'))  # 假设数据是文本格式
+        else:
+            print(f"Failed to retrieve data: {response.status_code}")
+        # stream = await OAI_CLIENT.chat.completions.create(
+        #     model=os.getenv("OLLAMA_MODEL"),
+        #     messages=formatted_prompt,
+        #     **OAI_GENERATE_KWARGS,
+        #     stream=True
+        # )
         output = ""
         async for chunk in stream:
             if chunk.choices[0].delta.content:
