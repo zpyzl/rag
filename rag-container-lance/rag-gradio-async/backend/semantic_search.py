@@ -28,8 +28,8 @@ BATCH_SIZE = 8
 NPROBES = 50
 REFINE_FACTOR = 30
 
-retriever = AsyncInferenceClient(model="http://127.0.0.1:44874" + "/embed")
-reranker = AsyncInferenceClient(model="http://127.0.0.1:45481" + "/rerank")
+retriever = AsyncInferenceClient(model="http://39.170.17.192:9100" + "/embed")
+reranker = AsyncInferenceClient(model="http://39.170.17.192:9101" + "/rerank")
 
 db = lancedb.connect("/usr/src/.lancedb")
 tbl = db.open_table("docs2")
