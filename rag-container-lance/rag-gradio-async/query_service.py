@@ -28,13 +28,9 @@ def query_documents():
     try:
         query = request.args.get('query', type=str)
         logger.info(f"检索问题：{query}")
-        #docs = query_list(query)
-        #cache.set("docs",docs)
-        with open("r1",mode="r",encoding='utf-8') as f:
-            r = f.read()
-            r = json.loads(r)
-        return jsonify(r)
-        # return jsonify({"code": 200, "msg": 'ok', "data": r})
+        docs = query_list(query)
+        cache.set("docs",docs)
+        return jsonify({"code": 200, "msg": 'ok', "data": docs})
     except Exception as e:
         logger.exception(e)
 
