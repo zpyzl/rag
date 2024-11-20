@@ -38,10 +38,10 @@ def query_documents():
     except Exception as e:
         logger.exception(e)
 
-@app.route('/llm_answer', methods=['POST'])
+@app.route('/llm_answer', methods=['GET'])
 def llm_answer():
     try:
-        query = request.json.get['query']
+        query = request.args.get('query', type=str)
         docs = cache.get("docs")
         cache.clear()
         res = ollama_gen(query, docs, False)
@@ -51,7 +51,7 @@ def llm_answer():
 
 @app.route('/get_file', methods=['GET'])
 def get_file():
-    filepath = request.args.get('file_path', type=str)
+    filepath = request.args.get('filepath', type=str)
     return send_file( filepath)
 
 if __name__ == '__main__':
