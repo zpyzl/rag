@@ -1,6 +1,7 @@
 import asyncio
 import logging
 import json
+from http.client import responses
 from pathlib import Path
 
 import gradio as gr
@@ -11,8 +12,8 @@ import os
 import requests
 from huggingface_hub import AsyncInferenceClient
 
-from dotenv import load_dotenv
 from sympy import pprint
+from dotenv import load_dotenv
 
 load_dotenv("../../.env")
 
@@ -23,24 +24,23 @@ logger = logging.getLogger(__name__)
 # db
 TABLE_NAME = os.getenv("TABLE_NAME")
 TEXT_COLUMN = "text"
-BATCH_SIZE = int(os.getenv("BATCH_SIZE"))
-NPROBES = int(os.getenv("NPROBES"))
-REFINE_FACTOR = int(os.getenv("REFINE_FACTOR"))
+BATCH_SIZE = 8
+NPROBES = 50
+REFINE_FACTOR = 30
 
-retriever = AsyncInferenceClient(model=os.getenv("EMBED_URL") + "/embed")
-reranker = AsyncInferenceClient(model=os.getenv("RERANK_URL") + "/rerank")
+retriever = AsyncInferenceClient(model="http://127.0.0.1:44874" + "/embed")
+reranker = AsyncInferenceClient(model="http://127.0.0.1:45481" + "/rerank")
 
 db = lancedb.connect("/usr/src/.lancedb")
-tbl = db.open_table(TABLE_NAME)
+tbl = db.open_table("docs2")
 
+TOP_K_RANK = int(4)
+TOP_K_RETRIEVE = int(20)
 
-TOP_K_RANK = int(os.getenv("TOP_K_RANK"))
-TOP_K_RETRIEVE = int(os.getenv("TOP_K_RETRIEVE"))
-
-async def retrieve(query: str, k: int) -> list[str]:
+async def retrieve_docs(query: str, k: int):
     """
-    Retrieve top k items with RETRIEVER
-    """
+        Retrieve top k items with RETRIEVER
+        """
     resp = await retriever.post(
         json={
             "inputs": query,
@@ -51,14 +51,16 @@ async def retrieve(query: str, k: int) -> list[str]:
         query_vec = json.loads(resp)[0]
     except:
         raise gr.Error(resp.decode())
-    
+
     documents = tbl.search(
         query=query_vec
     ).nprobes(NPROBES).refine_factor(REFINE_FACTOR).limit(k).to_list()
-    documents = [doc[TEXT_COLUMN] for doc in documents]
-
     return documents
 
+async def retrieve(query: str, k: int) -> list[str]:
+    documents = await retrieve_docs(query, k)
+    documents = [doc[TEXT_COLUMN] for doc in documents]
+    return documents
 
 async def rerank(query: str, documents: list[str], k: int) -> list[str]:
     """
@@ -83,7 +85,7 @@ async def rerank(query: str, documents: list[str], k: int) -> list[str]:
 
     return documents
 
-def ollama_gen(query, docs: list[str]):
+def ollama_gen(query, docs: list[str], if_stream: bool):
     doc_texts = "\\n".join([doc for doc in docs])
 
     prompt = f"""
@@ -93,11 +95,17 @@ def ollama_gen(query, docs: list[str]):
     文档：{doc_texts}
     回答：
     """
+    stream = "true" if if_stream else "false"
     param = {
-            "model": "qwen2",
-            "prompt": prompt
+            "model": os.getenv("LLM_MODEL"),
+            "prompt": prompt,
+            "stream": stream
         }
     response = requests.post("http://localhost:11434/api/generate", json=param)
+    return response
+
+def ollama_gen_print(query, docs: list[str]):
+    response = ollama_gen(query, docs)
     if response.status_code == 200:
         for chunk in response.iter_content(chunk_size=1024):
             if chunk:
@@ -105,15 +113,17 @@ def ollama_gen(query, docs: list[str]):
     else:
         print(f"Failed to retrieve data: {response.status_code}")
 
-if __name__ == "__main__":
-    table = db.open_table(os.getenv("TABLE_NAME"))
-    rows = table.search()
-    row_count = len(rows.to_list())
+def query_list(query):
+    retrieved_docs = asyncio.run(retrieve_docs(query, TOP_K_RETRIEVE))
+    # documents = asyncio.run(rerank(query1, retrieved_docs, TOP_K_RANK))
+    # pprint(documents)
+    return retrieved_docs
 
+if __name__ == "__main__":
+    # table = db.open_table(os.getenv("TABLE_NAME"))
+    # rows = table.search()
+    # row_count = len(rows.to_list())
     query1 = "表情包是如何制作的？"
-    retrieved_docs = asyncio.run( retrieve(query1, TOP_K_RETRIEVE))
-    documents = asyncio.run(rerank(query1, retrieved_docs, TOP_K_RANK))
-    pprint(retrieved_docs)
-    pprint(documents)
-    print("大模型回答：")
-    ollama_gen(query1, documents)
+    docs1 = query_list(query1)
+    ollama_gen_print(query1, docs1)
+

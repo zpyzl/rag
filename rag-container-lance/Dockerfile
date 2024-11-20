@@ -44,7 +44,7 @@ WORKDIR /usr/src
 COPY rag-gradio-async app
 COPY ${DOCS_DIR} docs_dir
 
-COPY embed_and_index.py .
+COPY rag-gradio-async/embed_and_index.py .
 RUN chmod +x embed_and_index.py
 
 COPY entrypoint.sh .

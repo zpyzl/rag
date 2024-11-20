@@ -9,7 +9,7 @@ from logging.handlers import TimedRotatingFileHandler
 def setup_log(log_name, if_stdout=False):
     # 创建logger对象。传入logger名字
     logger = logging.getLogger(log_name)
-    log_path = os.path.join("logs",log_name)
+    log_path = os.path.join("../logs", log_name)
     # 设置日志记录等级
     logger.setLevel(logging.INFO)
     # interval 滚动周期，
