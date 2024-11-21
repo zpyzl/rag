@@ -2,6 +2,7 @@ import json
 import os
 import sys
 import time
+from pathlib import Path
 
 from flask import Flask, request, jsonify, send_file
 from flask_caching import Cache
@@ -29,6 +30,8 @@ def query_documents():
         query = request.args.get('query', type=str)
         logger.info(f"检索问题：{query}")
         docs = query_list(query)
+        for doc in docs:
+            doc['type'] = Path(doc['filepath']).suffix
         cache.set("docs",docs)
         return jsonify({"code": 200, "msg": 'ok', "data": docs})
     except Exception as e:

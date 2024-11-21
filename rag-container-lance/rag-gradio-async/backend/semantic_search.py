@@ -120,10 +120,13 @@ def query_list(query):
     return retrieved_docs
 
 if __name__ == "__main__":
-    # table = db.open_table(os.getenv("TABLE_NAME"))
-    # rows = table.search()
-    # row_count = len(rows.to_list())
+    table = db.open_table(os.getenv("TABLE_NAME"))
+    rows = table.search()
+    row_count = len(rows.to_list())
+    print(row_count)
     query1 = "表情包是如何制作的？"
     docs1 = query_list(query1)
     ollama_gen_print(query1, docs1)
+
+
 
