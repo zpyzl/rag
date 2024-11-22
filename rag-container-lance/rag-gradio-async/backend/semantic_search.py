@@ -99,7 +99,7 @@ def ollama_gen(query, docs: list[str], if_stream: bool):
     param = {
             "model": os.getenv("LLM_MODEL"),
             "prompt": prompt,
-            "stream": stream
+            "stream": if_stream
         }
     response = requests.post("http://localhost:11434/api/generate", json=param)
     return response

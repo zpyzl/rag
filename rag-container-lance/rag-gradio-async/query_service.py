@@ -47,7 +47,7 @@ def llm_answer():
         docs = cache.get("docs")
         cache.clear()
         res = ollama_gen(query, docs, False)
-        return jsonify({"code": 200, "msg": 'ok', "data": res.text})
+        return jsonify({"code": 200, "msg": 'ok', "data": json.loads(res.text)['response']})
     except Exception as e:
         logger.exception(e)
 
