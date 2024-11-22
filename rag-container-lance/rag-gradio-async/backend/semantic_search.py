@@ -105,7 +105,7 @@ def ollama_gen(query, docs: list[str], if_stream: bool):
     return response
 
 def ollama_gen_print(query, docs: list[str]):
-    response = ollama_gen(query, docs)
+    response = ollama_gen(query, docs, True)
     if response.status_code == 200:
         for chunk in response.iter_content(chunk_size=1024):
             if chunk:
