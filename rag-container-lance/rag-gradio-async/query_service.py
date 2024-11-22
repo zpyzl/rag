@@ -6,6 +6,7 @@ from pathlib import Path
 
 from flask import Flask, request, jsonify, send_file
 from flask_caching import Cache
+from flask_cors import CORS
 from backend.semantic_search import query_list, ollama_gen
 from log_utils import setup_log
 from dotenv import load_dotenv
@@ -21,6 +22,8 @@ config = {
 app = Flask(__name__)
 app.config.from_mapping(config)
 cache = Cache(app)
+
+CORS(app, resources=r'/*')
 
 logger = setup_log('query_service.log',True)
 

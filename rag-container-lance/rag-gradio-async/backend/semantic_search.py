@@ -28,8 +28,8 @@ BATCH_SIZE = 8
 NPROBES = 50
 REFINE_FACTOR = 30
 
-retriever = AsyncInferenceClient(model="http://39.170.17.192:9100" + "/embed")
-reranker = AsyncInferenceClient(model="http://39.170.17.192:9101" + "/rerank")
+retriever = AsyncInferenceClient(model="http://localhost:43739" + "/embed")
+reranker = AsyncInferenceClient(model="http://localhost:45481" + "/rerank")
 
 db = lancedb.connect("/usr/src/.lancedb")
 tbl = db.open_table("docs2")
@@ -86,7 +86,7 @@ async def rerank(query: str, documents: list[str], k: int) -> list[str]:
     return documents
 
 def ollama_gen(query, docs: list[str], if_stream: bool):
-    doc_texts = "\\n".join([doc for doc in docs])
+    doc_texts = "\\n".join([doc['text'] for doc in docs])
 
     prompt = f"""
     你是一个能回答问题的智能助理，请用下列文档来回答问题。
