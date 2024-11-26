@@ -1,19 +1,13 @@
 import asyncio
-import logging
 import json
-from http.client import responses
-from pathlib import Path
+import logging
+import os
 
 import gradio as gr
 import numpy as np
-import lancedb
-import os
-
 import requests
-from huggingface_hub import AsyncInferenceClient
-
-from sympy import pprint
 from dotenv import load_dotenv
+from huggingface_hub import AsyncInferenceClient
 
 load_dotenv("../../.env")
 
@@ -28,7 +22,7 @@ BATCH_SIZE = 8
 NPROBES = 50
 REFINE_FACTOR = 30
 
-retriever = AsyncInferenceClient(model="http://localhost:43739" + "/embed")
+retriever = AsyncInferenceClient(model="http://39.170.17.192:9100" + "/embed")
 reranker = AsyncInferenceClient(model="http://localhost:45481" + "/rerank")
 
 db = lancedb.connect("/usr/src/.lancedb")
@@ -55,6 +49,8 @@ async def retrieve_docs(query: str, k: int):
     documents = tbl.search(
         query=query_vec
     ).nprobes(NPROBES).refine_factor(REFINE_FACTOR).limit(k).to_list()
+    for doc in documents:
+        doc['vector'] = ''
     return documents
 
 async def retrieve(query: str, k: int) -> list[str]:
@@ -95,7 +91,6 @@ def ollama_gen(query, docs: list[str], if_stream: bool):
     文档：{doc_texts}
     回答：
     """
-    stream = "true" if if_stream else "false"
     param = {
             "model": os.getenv("LLM_MODEL"),
             "prompt": prompt,
@@ -120,13 +115,13 @@ def query_list(query):
     return retrieved_docs
 
 if __name__ == "__main__":
-    table = db.open_table(os.getenv("TABLE_NAME"))
-    rows = table.search()
-    row_count = len(rows.to_list())
-    print(row_count)
-    query1 = "表情包是如何制作的？"
+    # rows = tbl.search()
+    # row_count = len(rows.to_list())
+    # print(row_count)
+    query1 = "谁作业未提交"
     docs1 = query_list(query1)
-    ollama_gen_print(query1, docs1)
+    print(docs1)
+    # ollama_gen_print(query1, docs1)
 
 
 

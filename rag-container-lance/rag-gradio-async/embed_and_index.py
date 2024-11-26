@@ -1,6 +1,7 @@
 import json
 import logging
 import os
+import sys
 import time
 from pathlib import Path
 from typing import List
@@ -25,7 +26,7 @@ logger = setup_log('embed_and_index.log',True)
 
 
 TEI_URL= os.getenv("EMBED_URL") + "/embed"
-DIRPATH = r"D:\test_rag_doc"
+DIRPATH = r"D:\test_rag_doc\发送范围"
 TABLE_NAME = os.getenv("TABLE_NAME")
 config = AutoConfig.from_pretrained(os.getenv("EMBED_MODEL"))
 EMB_DIM = config.hidden_size
@@ -49,7 +50,11 @@ def embed_and_index():
             pa.field("text", pa.string()),
         ]
     )
-    tbl = db.create_table(TABLE_NAME, schema=schema, mode=os.getenv("CREATE_TABLE_MODE"))
+    if sys.argv[1] == 'a':
+        tbl = db.open_table(TABLE_NAME)
+    else:
+        tbl = db.create_table(TABLE_NAME, schema=schema, mode=os.getenv("CREATE_TABLE_MODE"))
+
     start = time.time()
     files = Path(DIRPATH).rglob('*')
     file_list = list(files)
@@ -61,7 +66,7 @@ def embed_and_index():
                                                  json={'file_path':str(file.resolve())}).json()
                 loaded_files = file_loader_resp['data']
                 if file_loader_resp['code'] != 200:
-                    raise RuntimeError(file_loader_resp.text)
+                    raise RuntimeError(f"load file failed: {file.resolve()}")
 
                 file_chunks = req_chunk(file, loaded_files)
 
@@ -74,7 +79,7 @@ def embed_and_index():
 
                     resp = requests.post(TEI_URL, json=payload, headers=HEADERS)
                     if resp.status_code != 200:
-                        raise RuntimeError(resp.text)
+                        raise RuntimeError(f"failed call embedding for {file.resolve()}")
                     vectors = resp.json()
 
                     data = [
@@ -97,7 +102,7 @@ def req_chunk(file, files):
     chunk_resp = requests.post("http://localhost:5002/chunk", json={'files': json.dumps(files)}).json()
     chunking_files = chunk_resp['data']
     if chunk_resp['code'] != 200:
-        raise RuntimeError(chunk_resp.text)
+        raise RuntimeError(f"failed chunking, files0: {files[0].resolve()}")
     file_chunks: List[FileChunk] = []
     for file in chunking_files:
         if 'chunks' in file:

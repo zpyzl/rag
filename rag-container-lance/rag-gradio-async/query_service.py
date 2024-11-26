@@ -4,7 +4,7 @@ import sys
 import time
 from pathlib import Path
 
-from flask import Flask, request, jsonify, send_file
+from flask import Flask, request, jsonify, send_file, make_response
 from flask_caching import Cache
 from flask_cors import CORS
 from backend.semantic_search import query_list, ollama_gen
@@ -24,7 +24,6 @@ app.config.from_mapping(config)
 cache = Cache(app)
 
 CORS(app, resources=r'/*')
-
 logger = setup_log('query_service.log',True)
 
 @app.route('/query_documents', methods=['GET','POST'])
