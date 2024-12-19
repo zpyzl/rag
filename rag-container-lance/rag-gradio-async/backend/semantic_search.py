@@ -4,6 +4,7 @@ import logging
 import os
 
 import gradio as gr
+import lancedb
 import numpy as np
 import requests
 from dotenv import load_dotenv
@@ -97,6 +98,8 @@ def ollama_gen(query, docs: list[str], if_stream: bool):
             "stream": if_stream
         }
     response = requests.post("http://localhost:11434/api/generate", json=param)
+    # rjson = json.loads(response.text)
+    # return rjson["choices"][0]["message"]["content"]
     return response
 
 def ollama_gen_print(query, docs: list[str]):
@@ -113,6 +116,9 @@ def query_list(query):
     # documents = asyncio.run(rerank(query1, retrieved_docs, TOP_K_RANK))
     # pprint(documents)
     return retrieved_docs
+
+
+
 
 if __name__ == "__main__":
     # rows = tbl.search()

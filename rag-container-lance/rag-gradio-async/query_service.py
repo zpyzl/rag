@@ -34,8 +34,14 @@ def query_documents():
         docs = query_list(query)
         for doc in docs:
             doc['type'] = Path(doc['filepath']).suffix
-        cache.set("docs",docs)
-        return jsonify({"code": 200, "msg": 'ok', "data": docs})
+
+        docs_filtered = []
+        for doc in docs:
+            if '赵鹏阳' not in doc['filename'] and '赵鹏阳' not in doc['text']:
+                docs_filtered.append(doc)
+
+        cache.set("docs",docs_filtered)
+        return jsonify({"code": 200, "msg": 'ok', "data": docs_filtered})
     except Exception as e:
         logger.exception(e)
 
@@ -45,8 +51,9 @@ def llm_answer():
         query = request.args.get('query', type=str)
         docs = cache.get("docs")
         cache.clear()
-        res = ollama_gen(query, docs, False)
-        return jsonify({"code": 200, "msg": 'ok', "data": json.loads(res.text)['response']})
+        # res = ollama_gen(query, docs, False)
+        # return jsonify({"code": 200, "msg": 'ok', "data": json.loads(res.text)['response']})
+        return jsonify({"code": 200, "msg": 'ok', "data": "大模型回答大模型回答"})
     except Exception as e:
         logger.exception(e)
 
