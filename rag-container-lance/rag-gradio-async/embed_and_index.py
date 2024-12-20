@@ -26,7 +26,7 @@ logger = setup_log('embed_and_index.log',True)
 
 
 TEI_URL= os.getenv("EMBED_URL") + "/embed"
-DIRPATH = r"D:\test_rag_doc\发送范围"
+DIRPATH = r"D:\test_rag_doc\doc_wps"
 TABLE_NAME = os.getenv("TABLE_NAME")
 config = AutoConfig.from_pretrained(os.getenv("EMBED_MODEL"))
 EMB_DIM = config.hidden_size
@@ -41,7 +41,10 @@ HEADERS = {
 
 
 def embed_and_index():
-    db = lancedb.connect("/usr/src/.lancedb")
+    if len(sys.argv) < 3:
+        raise RuntimeError("argv1 should be a(add) or c(create table), argv2 should be path of lancedb table")
+
+    db = lancedb.connect(sys.argv[2])
     schema = pa.schema(
         [
             pa.field("vector", pa.list_(pa.float32(), EMB_DIM)),
