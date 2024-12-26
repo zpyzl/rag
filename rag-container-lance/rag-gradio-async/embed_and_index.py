@@ -26,7 +26,7 @@ logger = setup_log('embed_and_index.log',True)
 
 
 TEI_URL= os.getenv("EMBED_URL") + "/embed"
-DIRPATH = r"D:\test_rag_doc\doc_wps"
+DIRPATH = sys.argv[2]
 TABLE_NAME = os.getenv("TABLE_NAME")
 config = AutoConfig.from_pretrained(os.getenv("EMBED_MODEL"))
 EMB_DIM = config.hidden_size
@@ -41,10 +41,10 @@ HEADERS = {
 
 
 def embed_and_index():
-    if len(sys.argv) < 3:
+    if len(sys.argv) < 4:
         raise RuntimeError("argv1 should be a(add) or c(create table), argv2 should be path of lancedb table")
 
-    db = lancedb.connect(sys.argv[2])
+    db = lancedb.connect('/usr/src/.lancedb')
     schema = pa.schema(
         [
             pa.field("vector", pa.list_(pa.float32(), EMB_DIM)),
@@ -61,35 +61,46 @@ def embed_and_index():
     start = time.time()
     files = Path(DIRPATH).rglob('*')
     file_list = list(files)
+    begin = False
     for j in tqdm(range(len(file_list))):
         file = file_list[j]
         if file.is_file():
             try:
+                if not begin and sys.argv[3] != str(file): # 没到断点，跳过
+                    continue
+                elif not begin:
+                    begin = True
+                    logger.info(f"continue {file}, file count:{j}")
+
+                if file.stat().st_size > 500000:
+                    continue
+
+                t1 = time.time()
                 file_loader_resp = requests.post("http://localhost:5000/load_file",
                                                  json={'file_path':str(file.resolve())}).json()
                 loaded_files = file_loader_resp['data']
                 if file_loader_resp['code'] != 200:
-                    raise RuntimeError(f"load file failed: {file.resolve()}")
+                    continue
 
-                file_chunks = req_chunk(file, loaded_files)
+                    file_chunks = req_chunk(file, loaded_files)
 
-                for j in range(int(np.ceil(len(file_chunks) / BATCH_SIZE))):
-                    file_chunk_batch = file_chunks[j * BATCH_SIZE:(j + 1) * BATCH_SIZE]
-                    payload = {
-                        "inputs": [file_chunk.chunk for file_chunk in file_chunk_batch],# texts: list of str
-                        "truncate": True
-                    }
+                    for j in range(int(np.ceil(len(file_chunks) / BATCH_SIZE))):
+                        file_chunk_batch = file_chunks[j * BATCH_SIZE:(j + 1) * BATCH_SIZE]
+                        payload = {
+                            "inputs": [file_chunk.chunk for file_chunk in file_chunk_batch],# texts: list of str
+                            "truncate": True
+                        }
 
-                    resp = requests.post(TEI_URL, json=payload, headers=HEADERS)
-                    if resp.status_code != 200:
-                        raise RuntimeError(f"failed call embedding for {file.resolve()}")
-                    vectors = resp.json()
+                        resp = requests.post(TEI_URL, json=payload, headers=HEADERS)
+                        if resp.status_code != 200:
+                            raise RuntimeError(f"failed call embedding for {file.resolve()}")
+                        vectors = resp.json()
 
-                    data = [
-                        {"vector": vec,"filename":file_chunk.filename, "filepath": file_chunk.filepath,  "text": file_chunk.chunk}
-                        for vec, file_chunk in zip(vectors, file_chunk_batch)
-                    ]
-                    tbl.add(data=data)
+                        data = [
+                            {"vector": vec,"filename":file_chunk.filename, "filepath": file_chunk.filepath,  "text": file_chunk.chunk}
+                            for vec, file_chunk in zip(vectors, file_chunk_batch)
+                        ]
+                        tbl.add(data=data)
             except Exception as e:
                 logger.error(f"Unhandled exception for file: {file}", e)
                 logger.exception(e)
