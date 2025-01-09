@@ -4,8 +4,10 @@ import logging
 import os
 
 import gradio as gr
+import lancedb
 import numpy as np
 import requests
+from click import prompt
 from dotenv import load_dotenv
 from huggingface_hub import AsyncInferenceClient
 
@@ -82,21 +84,24 @@ async def rerank(query: str, documents: list[str], k: int) -> list[str]:
     return documents
 
 def ollama_gen(query, docs: list[str], if_stream: bool):
-    doc_texts = "\\n".join([doc['text'] for doc in docs])
+    if not docs:
+        p = query
+    else:
+        doc_texts = "\\n".join([doc['text'] for doc in docs])
 
-    prompt = f"""
-    你是一个能回答问题的智能助理，请用下列文档来回答问题。
-    如果你不知道答案，直接返回“未能根据搜索结果生成回答”。请将回答限制在{os.getenv("ANSWER_LIMIT")}字，并请保持回答简洁。
-    问题：{query}
-    文档：{doc_texts}
-    回答：
-    """
+        p = f"""
+        你是一个能回答问题的智能助理，请用下列文档来回答问题。
+        如果你不知道答案，直接返回“未能根据搜索结果生成回答”。请将回答限制在{os.getenv("ANSWER_LIMIT")}字，并请保持回答简洁。
+        问题：{query}
+        文档：{doc_texts}
+        回答：
+        """
     param = {
             "model": os.getenv("LLM_MODEL"),
-            "prompt": prompt,
-            "stream": if_stream
+            "prompt": p,
+            "stream": if_stream,
         }
-    response = requests.post("http://localhost:11434/api/generate", json=param)
+    response = requests.post("http://39.175.132.228:9103/api/generate", json=param)
     return response
 
 def ollama_gen_print(query, docs: list[str]):
@@ -118,10 +123,14 @@ if __name__ == "__main__":
     # rows = tbl.search()
     # row_count = len(rows.to_list())
     # print(row_count)
-    query1 = "谁作业未提交"
-    docs1 = query_list(query1)
-    print(docs1)
+    # query1 = "谁作业未提交"
+    # docs1 = query_list(query1)
+    # print(docs1)
     # ollama_gen_print(query1, docs1)
+    ans = ollama_gen("找一份2024年的杭州市政府工作报告", [], False)
+    print(ans)
+    if ans:
+        print(ans.text)
 
 
 
