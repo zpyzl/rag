@@ -33,7 +33,7 @@ tbl = db.open_table("docs2")
 TOP_K_RANK = int(4)
 TOP_K_RETRIEVE = int(20)
 
-async def retrieve_docs(query: str, k: int):
+async def retrieve_docs(query: str, k: int, filenames_not_in: list[str] = None):
     """
         Retrieve top k items with RETRIEVER
         """
@@ -48,9 +48,18 @@ async def retrieve_docs(query: str, k: int):
     except:
         raise gr.Error(resp.decode())
 
-    documents = tbl.search(
-        query=query_vec
-    ).nprobes(NPROBES).refine_factor(REFINE_FACTOR).limit(k).to_list()
+    if filenames_not_in:
+        filenames_str = "\'"
+        filenames_str += "\',\'".join([filename for filename in filenames_not_in])
+        filenames_str += "\'"
+        documents = tbl.search(
+            query=query_vec
+        ).where(f"filename NOT IN ({filenames_str})").nprobes(NPROBES).refine_factor(REFINE_FACTOR).limit(k).to_list()
+    else:
+        documents = tbl.search(
+            query=query_vec
+        ).nprobes(NPROBES).refine_factor(REFINE_FACTOR).limit(k).to_list()
+
     for doc in documents:
         doc['vector'] = ''
     return documents
@@ -113,8 +122,9 @@ def ollama_gen_print(query, docs: list[str]):
     else:
         print(f"Failed to retrieve data: {response.status_code}")
 
-def query_list(query):
-    retrieved_docs = asyncio.run(retrieve_docs(query, TOP_K_RETRIEVE))
+def query_list(query,filenames_not_in = None):
+    retrieved_docs = asyncio.run(retrieve_docs(query, TOP_K_RETRIEVE,filenames_not_in))
+    # 注意这个方法被用作重复调用去重！！！
     # documents = asyncio.run(rerank(query1, retrieved_docs, TOP_K_RANK))
     # pprint(documents)
     return retrieved_docs

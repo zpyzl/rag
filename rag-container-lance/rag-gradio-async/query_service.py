@@ -10,7 +10,7 @@ from flask_caching import Cache
 from flask_cors import CORS
 from olefile.olefile import keyword
 
-from backend.semantic_search import query_list, ollama_gen
+from backend.semantic_search import query_list, ollama_gen, TOP_K_RETRIEVE
 from log_utils import setup_log
 from dotenv import load_dotenv
 
@@ -47,6 +47,8 @@ def intent_recog():
     except Exception as e:
         logger.exception(e)
 
+def distinct(docs):
+    return list({d['filename']: d for d in docs}.values())
 
 @app.route('/query_documents', methods=['GET','POST'])
 def query_documents():
@@ -54,6 +56,20 @@ def query_documents():
         query = request.args.get('query', type=str)
         logger.info(f"检索问题：{query}")
         docs = query_list(query)
+        unique_docs = distinct(docs)
+
+        while len(unique_docs) < TOP_K_RETRIEVE:
+            existing_filenames = [d['filename'] for d in unique_docs]
+            more_docs = query_list(query, existing_filenames)
+            if not more_docs:
+                break
+            # 更多去重文件 = 去重（更多文件）
+            more_docs = distinct(more_docs)
+            # 已有去重文件+=更多去重文件
+            unique_docs.extend(more_docs)
+
+        docs = unique_docs[:TOP_K_RETRIEVE]
+
         for doc in docs:
             doc['type'] = Path(doc['filepath']).suffix
         cache.set("docs",docs)
