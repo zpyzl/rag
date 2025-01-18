@@ -82,7 +82,7 @@ def embed_and_index():
                 if file_loader_resp['code'] != 200:
                     continue
 
-                file_chunks = req_chunk(file, loaded_files)
+                file_chunks = req_chunk(loaded_files)
 
                 for j in range(int(np.ceil(len(file_chunks) / BATCH_SIZE))):
                     file_chunk_batch = file_chunks[j * BATCH_SIZE:(j + 1) * BATCH_SIZE]
@@ -112,7 +112,7 @@ def embed_and_index():
         tbl.create_index(vector_column_name='vector',num_partitions=NUM_PARTITIONS, num_sub_vectors=NUM_SUB_VECTORS)
 
 
-def req_chunk(file, files):
+def req_chunk(files):
     chunk_resp = requests.post("http://localhost:5002/chunk", json={'files': json.dumps(files)}).json()
     chunking_files = chunk_resp['data']
     if chunk_resp['code'] != 200:

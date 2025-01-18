@@ -91,7 +91,10 @@ def llm_answer():
 @app.route('/get_file', methods=['GET'])
 def get_file():
     filepath = request.args.get('filepath', type=str)
-    return send_file( filepath)
+    if filepath.startswith("http://"):
+        return jsonify({"code": 200, "msg": 'ok', "data": filepath})
+    else:
+        return send_file( filepath)
 
 if __name__ == '__main__':
     app.run("0.0.0.0",port=5003)
