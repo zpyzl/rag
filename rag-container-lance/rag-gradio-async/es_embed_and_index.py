@@ -152,7 +152,7 @@ def embed_and_index(hits, esIndex: EsIndex):
                 vectors = resp.json()
 
                 data = [
-                    {"vector": vec,"filename":filename, "filepath": url,  "text": file_chunk.chunk}
+                    {"vector": vec,"filename ":filename, "filepath": url,  "text": file_chunk.chunk}
                     for vec, file_chunk in zip(vectors, file_chunk_batch)
                 ]
                 tbl.add(data=data)

@@ -10,6 +10,7 @@ import requests
 from click import prompt
 from dotenv import load_dotenv
 from huggingface_hub import AsyncInferenceClient
+from nltk.corpus.reader import documents
 
 load_dotenv("../../.env")
 
@@ -48,18 +49,25 @@ async def retrieve_docs(query: str, k: int, filenames_not_in: list[str] = None):
     except:
         raise gr.Error(resp.decode())
 
-    if filenames_not_in:
-        filenames_str = "\'"
-        filenames_str += "\',\'".join([filename for filename in filenames_not_in])
-        filenames_str += "\'"
-        documents = tbl.search(
-            query=query_vec
-        ).where(f"filename NOT IN ({filenames_str})").nprobes(NPROBES).refine_factor(REFINE_FACTOR).limit(k).to_list()
-    else:
-        documents = tbl.search(
-            query=query_vec
-        ).nprobes(NPROBES).refine_factor(REFINE_FACTOR).limit(k).to_list()
-
+    # if filenames_not_in:
+    #     filenames_str = "\'"
+    #     filenames_str += "\',\'".join([filename for filename in filenames_not_in])
+    #     filenames_str += "\'"
+    #     documents = tbl.search(
+    #         query=query_vec
+    #     ).where(f"filename NOT IN ({filenames_str})").nprobes(NPROBES).refine_factor(REFINE_FACTOR).limit(k).to_list()
+    # else:
+    #     documents = tbl.search(
+    #         query=query_vec
+    #     ).nprobes(NPROBES).refine_factor(REFINE_FACTOR).limit(k).to_list()
+    param = {
+        "vec": query_vec,
+        "filenames_not_in": filenames_not_in
+    }
+    print(query_vec)
+    r = requests.post("http://localhost:5004/search",json=param)
+    rjson = json.loads(r.text)
+    documents = rjson['data']
     for doc in documents:
         doc['vector'] = ''
     return documents

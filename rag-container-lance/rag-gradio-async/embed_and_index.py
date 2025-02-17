@@ -100,6 +100,7 @@ def embed_and_index():
                         {"vector": vec,"filename":file_chunk.filename, "filepath": file_chunk.filepath,  "text": file_chunk.chunk}
                         for vec, file_chunk in zip(vectors, file_chunk_batch)
                     ]
+                    tbl.create_fts_index()
                     tbl.add(data=data)
             except Exception as e:
                 logger.error(f"Unhandled exception for file: {file}", e)
