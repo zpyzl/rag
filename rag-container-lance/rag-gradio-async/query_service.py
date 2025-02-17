@@ -2,17 +2,16 @@ import json
 import os
 import re
 import sys
-import time
 from pathlib import Path
 
-from flask import Flask, request, jsonify, send_file, make_response
+import requests
+from dotenv import load_dotenv
+from flask import Flask, request, jsonify, send_file, Response, stream_with_context
 from flask_caching import Cache
 from flask_cors import CORS
-from olefile.olefile import keyword
 
 from backend.semantic_search import query_list, ollama_gen, TOP_K_RETRIEVE
 from log_utils import setup_log
-from dotenv import load_dotenv
 
 load_dotenv()
 
@@ -28,6 +27,38 @@ cache = Cache(app)
 
 CORS(app, resources=r'/*')
 logger = setup_log('query_service.log',True)
+
+
+def generate_response(prompt):
+    response = requests.post("http://39.175.132.230:35191/v1/chat/completions", json={
+        "model": "deepseek-r1:32b",
+        "messages": [
+            {
+                "role": "system",
+                "content": "你是一个智能助理"
+            },
+            {
+                "role": "user",
+                "content": prompt
+            }
+        ], "stream": True
+    }, stream=True)
+
+    return get_stream_response(response)
+
+def get_stream_response(response):
+    # 流式接收response，并转发
+    for chunk in response.iter_content(chunk_size=1):
+        yield chunk
+
+@app.route('/chat/<prompt>')
+def chat(prompt):
+    def generate():
+        for chunk in generate_response(prompt):
+            yield chunk
+
+    return Response(stream_with_context(generate()), mimetype='text/event-stream')
+
 
 @app.route('/intent_recog', methods=['GET','POST'])
 def intent_recog():
