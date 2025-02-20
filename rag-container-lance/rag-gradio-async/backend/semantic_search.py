@@ -104,15 +104,7 @@ def ollama_gen(query, docs: list[str], if_stream: bool):
     if not docs:
         p = query
     else:
-        doc_texts = "\\n".join([doc['text'] for doc in docs])
-
-        p = f"""
-        你是一个能回答问题的智能助理，请用下列文档来回答问题。
-        如果你不知道答案，直接返回“未能根据搜索结果生成回答”。请将回答限制在{os.getenv("ANSWER_LIMIT")}字，并请保持回答简洁。
-        问题：{query}
-        文档：{doc_texts}
-        回答：
-        """
+        p = get_prompt_by_docs(docs, query)
     param = {
             "model": os.getenv("LLM_MODEL"),
             "prompt": p,
@@ -120,6 +112,19 @@ def ollama_gen(query, docs: list[str], if_stream: bool):
         }
     response = requests.post("http://39.175.132.228:9103/api/generate", json=param)
     return response
+
+
+def get_prompt_by_docs(docs, query):
+    doc_texts = "\\n".join([doc['text'] for doc in docs])
+    p = f"""
+        你是一个能回答问题的智能助理，请用下列文档来回答问题。
+        如果你不知道答案，直接返回“未能根据搜索结果生成回答”。请将回答限制在{os.getenv("ANSWER_LIMIT")}字，并请保持回答简洁。
+        问题：{query}
+        文档：{doc_texts}
+        回答：
+        """
+    return p
+
 
 def ollama_gen_print(query, docs: list[str]):
     response = ollama_gen(query, docs, True)
