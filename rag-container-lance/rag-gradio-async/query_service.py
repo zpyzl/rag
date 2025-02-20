@@ -3,6 +3,7 @@ import os
 import re
 import sys
 from pathlib import Path
+import uuid
 
 import requests
 from dotenv import load_dotenv
@@ -10,7 +11,7 @@ from flask import Flask, request, jsonify, send_file, Response, stream_with_cont
 from flask_caching import Cache
 from flask_cors import CORS
 
-from backend.semantic_search import query_list, ollama_gen, TOP_K_RETRIEVE
+from backend.semantic_search import query_list, ollama_gen, TOP_K_RETRIEVE, get_prompt_by_docs
 from log_utils import setup_log
 
 load_dotenv()
@@ -29,21 +30,9 @@ CORS(app, resources=r'/*')
 logger = setup_log('query_service.log',True)
 
 
-def generate_response(prompt):
-    response = requests.post("http://39.175.132.230:35191/v1/chat/completions", json={
-        "model": "deepseek-r1:32b",
-        "messages": [
-            {
-                "role": "system",
-                "content": "你是一个智能助理"
-            },
-            {
-                "role": "user",
-                "content": prompt
-            }
-        ], "stream": True
-    }, stream=True)
-
+def call_completions(param):
+    response = requests.post("http://39.175.132.230:35191/v1/chat/completions",
+                                 json=param, stream=True)
     return get_stream_response(response)
 
 def get_stream_response(response):
@@ -51,10 +40,24 @@ def get_stream_response(response):
     for chunk in response.iter_content(chunk_size=1):
         yield chunk
 
-@app.route('/chat/<prompt>')
-def chat(prompt):
+@app.route('/chat', methods=['POST'])
+def chat():
+    param = request.json
+    if_rag = request.json.get('rag')
+    if if_rag == "true":
+        rag_param = param
+        # 获取最后一个问题：messages中最后一个，获取content,拼接content
+        messages = request.json.get('messages')
+        query = messages[-1]['content']
+        docs = request.json.get('docs')
+        prompt = get_prompt_by_docs(docs, query)
+        messages[-1]['content'] = prompt
+        rag_param['messages'] = messages
+        param = rag_param
+
     def generate():
-        for chunk in generate_response(prompt):
+        logger.info(f"call_completions param: {param}")
+        for chunk in call_completions(param):
             yield chunk
 
     return Response(stream_with_context(generate()), mimetype='text/event-stream')
@@ -86,33 +89,38 @@ def query_documents():
     try:
         query = request.args.get('query', type=str)
         logger.info(f"检索问题：{query}")
-        docs = query_list(query)
-        unique_docs = distinct(docs)
-
-        while len(unique_docs) < TOP_K_RETRIEVE:
-            existing_filenames = [d['filename'] for d in unique_docs]
-            more_docs = query_list(query, existing_filenames)
-            if not more_docs:
-                break
-            # 更多去重文件 = 去重（更多文件）
-            more_docs = distinct(more_docs)
-            # 已有去重文件+=更多去重文件
-            unique_docs.extend(more_docs)
-
-        docs = unique_docs[:TOP_K_RETRIEVE]
-
-        for doc in docs:
-            doc['type'] = Path(doc['filepath']).suffix
-        cache.set("docs",docs)
+        docs = query_unique_docs(query)
         return jsonify({"code": 200, "msg": 'ok', "data": docs})
     except Exception as e:
         logger.exception(e)
+
+def query_unique_docs(query):
+    docs = query_list(query)
+    unique_docs = distinct(docs)
+    while len(unique_docs) < TOP_K_RETRIEVE:
+        existing_filenames = [d['filename'] for d in unique_docs]
+        more_docs = query_list(query, existing_filenames)
+        if not more_docs:
+            break
+        # 更多去重文件 = 去重（更多文件）
+        more_docs = distinct(more_docs)
+        # 已有去重文件+=更多去重文件
+        unique_docs.extend(more_docs)
+    docs = unique_docs[:TOP_K_RETRIEVE]
+    for doc in docs:
+        doc['type'] = Path(doc['filepath']).suffix
+
+    # docs_id = uuid.uuid4()
+    # cache.set(docs_id, docs)
+    return  docs
+
 
 @app.route('/llm_answer', methods=['GET'])
 def llm_answer():
     try:
         query = request.args.get('query', type=str)
-        docs = cache.get("docs")
+        docs_id = request.args.get('docs_id', type=str)
+        docs = cache.get(docs_id)
         cache.clear()
         res = ollama_gen(query, docs, False)
         return jsonify({"code": 200, "msg": 'ok', "data": json.loads(res.text)['response']})
