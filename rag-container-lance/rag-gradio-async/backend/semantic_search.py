@@ -3,14 +3,11 @@ import json
 import logging
 import os
 
-import gradio as gr
 import lancedb
 import numpy as np
 import requests
-from click import prompt
 from dotenv import load_dotenv
 from huggingface_hub import AsyncInferenceClient
-from nltk.corpus.reader import documents
 
 load_dotenv("../../.env")
 
@@ -47,7 +44,7 @@ async def retrieve_docs(query: str, k: int, filenames_not_in: list[str] = None):
     try:
         query_vec = json.loads(resp)[0]
     except:
-        raise gr.Error(resp.decode())
+        raise RuntimeError(resp.decode())
 
     # if filenames_not_in:
     #     filenames_str = "\'"
@@ -95,7 +92,7 @@ async def rerank(query: str, documents: list[str], k: int) -> list[str]:
             batch_scores = [s["score"] for s in batch_scores]
             scores.extend(batch_scores)
         except:
-            raise gr.Error(resp.decode())
+            raise RuntimeError(resp.decode())
     documents = [doc for _, doc in sorted(zip(scores, documents))[-k:]]
 
     return documents
