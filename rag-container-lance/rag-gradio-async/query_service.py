@@ -40,9 +40,20 @@ def get_stream_response(response):
     for chunk in response.iter_content(chunk_size=1):
         yield chunk
 
-@app.route('/chat', methods=['POST'])
-def chat():
+@app.route('/v1/chat/completions', methods=['POST'])
+def pure_chat_completions():
     param = request.json
+    def generate():
+        logger.info(f"call_completions param: {param}")
+        for chunk in call_completions(param):
+            yield chunk
+
+    return Response(stream_with_context(generate()), mimetype='text/event-stream')
+
+@app.route('/chat_and_rag', methods=['POST'])
+def chat_and_rag():
+    param = request.json
+
     if_rag = request.json.get('rag')
     if if_rag == "true":
         rag_param = param
