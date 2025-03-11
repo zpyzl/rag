@@ -1,7 +1,6 @@
 import json
 import logging
 import os
-import sys
 import time
 from pathlib import Path
 from typing import List
@@ -14,6 +13,7 @@ from dotenv import load_dotenv
 from tqdm import tqdm
 from transformers import AutoConfig
 from log_utils import setup_log
+import argparse
 
 from FileChunk import FileChunk
 
@@ -24,12 +24,9 @@ logging.basicConfig(level=logging.INFO)
 
 logger = setup_log('embed_and_index.log',True)
 
-
 TEI_URL= os.getenv("EMBED_URL") + "/embed"
-DIRPATH = sys.argv[2]
-TABLE_NAME = os.getenv("TABLE_NAME")
 config = AutoConfig.from_pretrained(os.getenv("EMBED_MODEL"))
-EMB_DIM = config.hidden_size
+EMB_DIM = 1024 #config.hidden_size
 CREATE_INDEX = int(os.getenv("CREATE_INDEX"))
 BATCH_SIZE = int(os.getenv("BATCH_SIZE"))
 NUM_PARTITIONS = int(os.getenv("NUM_PARTITIONS"))
@@ -39,12 +36,17 @@ HEADERS = {
     "Content-Type": "application/json"
 }
 
-
 def embed_and_index():
-    if len(sys.argv) < 4:
-        raise RuntimeError("argv1 should be a(add) or c(create table), argv2 should be path of lancedb table")
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--db_path", help="db path", default='/usr/src/.lancedb')
+    parser.add_argument("table_name", help="table name")
+    parser.add_argument("dir_path", help="dir path")
+    parser.add_argument("create_or_append", help="create(c) or append(a) table")
+    parser.add_argument("--breakpoint", help="if not none, begin from breakpoint")
+    args = parser.parse_args()
 
-    db = lancedb.connect('/usr/src/.lancedb')
+    db = lancedb.connect(args.db_path)
+    TABLE_NAME = args.table_name
     schema = pa.schema(
         [
             pa.field("vector", pa.list_(pa.float32(), EMB_DIM)),
@@ -53,20 +55,20 @@ def embed_and_index():
             pa.field("text", pa.string()),
         ]
     )
-    if sys.argv[1] == 'a':
+    if args.create_or_append == 'a':
         tbl = db.open_table(TABLE_NAME)
     else:
         tbl = db.create_table(TABLE_NAME, schema=schema, mode=os.getenv("CREATE_TABLE_MODE"))
 
     start = time.time()
-    files = Path(DIRPATH).rglob('*')
+    files = Path(args.dir_path).rglob('*')
     file_list = list(files)
-    begin = False
+    begin = False if args.breakpoint else True # 声明了断点，则一上来不开始
     for j in tqdm(range(len(file_list))):
         file = file_list[j]
         if file.is_file():
             try:
-                if not begin and sys.argv[3] != str(file): # 没到断点，跳过
+                if not begin and args.breakpoint != str(file): # 没到断点，跳过
                     continue
                 elif not begin:
                     begin = True
@@ -100,7 +102,8 @@ def embed_and_index():
                         {"vector": vec,"filename":file_chunk.filename, "filepath": file_chunk.filepath,  "text": file_chunk.chunk}
                         for vec, file_chunk in zip(vectors, file_chunk_batch)
                     ]
-                    tbl.create_fts_index()
+                    #tbl.create_fts_index()
+                    #print(data)################# DEBUG
                     tbl.add(data=data)
             except Exception as e:
                 logger.error(f"Unhandled exception for file: {file}", e)

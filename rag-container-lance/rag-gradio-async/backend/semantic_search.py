@@ -26,7 +26,7 @@ retriever = AsyncInferenceClient(model="http://39.170.17.192:9100" + "/embed")
 reranker = AsyncInferenceClient(model="http://localhost:45481" + "/rerank")
 
 db = lancedb.connect("/usr/src/.lancedb")
-tbl = db.open_table("docs2")
+tbl = db.open_table("docs")
 
 TOP_K_RANK = int(4)
 TOP_K_RETRIEVE = int(20)
@@ -46,25 +46,25 @@ async def retrieve_docs(query: str, k: int, filenames_not_in: list[str] = None):
     except:
         raise RuntimeError(resp.decode())
 
-    # if filenames_not_in:
-    #     filenames_str = "\'"
-    #     filenames_str += "\',\'".join([filename for filename in filenames_not_in])
-    #     filenames_str += "\'"
-    #     documents = tbl.search(
-    #         query=query_vec
-    #     ).where(f"filename NOT IN ({filenames_str})").nprobes(NPROBES).refine_factor(REFINE_FACTOR).limit(k).to_list()
-    # else:
-    #     documents = tbl.search(
-    #         query=query_vec
-    #     ).nprobes(NPROBES).refine_factor(REFINE_FACTOR).limit(k).to_list()
-    param = {
-        "vec": query_vec,
-        "filenames_not_in": filenames_not_in
-    }
-    print(query_vec)
-    r = requests.post("http://localhost:5004/search",json=param)
-    rjson = json.loads(r.text)
-    documents = rjson['data']
+    if filenames_not_in:
+        filenames_str = "\'"
+        filenames_str += "\',\'".join([filename for filename in filenames_not_in])
+        filenames_str += "\'"
+        documents = tbl.search(
+            query=query_vec
+        ).where(f"filename NOT IN ({filenames_str})").nprobes(NPROBES).refine_factor(REFINE_FACTOR).limit(k).to_list()
+    else:
+        documents = tbl.search(
+            query=query_vec
+        ).nprobes(NPROBES).refine_factor(REFINE_FACTOR).limit(k).to_list()
+    # param = {
+    #     "vec": query_vec,
+    #     "filenames_not_in": filenames_not_in
+    # }
+    # print(query_vec)
+    # r = requests.post("http://localhost:5004/search",json=param)
+    # rjson = json.loads(r.text)
+    # documents = rjson['data']
     for doc in documents:
         doc['vector'] = ''
     return documents
