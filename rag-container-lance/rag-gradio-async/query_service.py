@@ -20,7 +20,6 @@ load_dotenv()
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 app = Flask(__name__)
-app.config.from_mapping(config)
 
 CORS(app, resources=r'/*')
 logger = setup_log('query_service.log',True)
