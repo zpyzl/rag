@@ -147,7 +147,7 @@ def vectorize():
     try:
         file_path = request.args.get('file_path', type=str)
         tbl = get_connect_db_table()
-        vectorize_file(file_path, tbl)
+        vectorize_file(Path(file_path), tbl)
         return jsonify({"code": 200, "msg": 'ok'})
     except Exception as e:
         logger.exception(e)
