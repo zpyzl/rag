@@ -155,6 +155,7 @@ def vectorize():
 def get_connect_db_table():
     db_path = request.args.get('db_path', type=str)
     table_name = request.args.get('table_name', type=str)
+    logger.info(f"db_path: {db_path}, table_name: {table_name}")
     db = lancedb.connect(db_path)
     tbl = db.create_table(table_name, schema=schema, mode="overwrite")
     return tbl
