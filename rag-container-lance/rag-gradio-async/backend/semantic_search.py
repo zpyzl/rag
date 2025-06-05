@@ -26,7 +26,7 @@ retriever = AsyncInferenceClient(model="http://39.170.17.192:9100" + "/embed")
 reranker = AsyncInferenceClient(model="http://localhost:45481" + "/rerank")
 
 db = lancedb.connect("/usr/src/.lancedb")
-tbl = db.open_table("docs")
+tbl = db.open_table("several_docs")
 
 TOP_K_RANK = int(4)
 TOP_K_RETRIEVE = int(20)
@@ -115,7 +115,7 @@ def get_prompt_by_docs(docs, query):
     doc_texts = "\\n".join([doc['text'] for doc in docs])
     p = f"""
         你是一个能回答问题的智能助理，请用下列文档来回答问题。
-        如果你不知道答案，直接返回“未能根据搜索结果生成回答”。请将回答限制在{os.getenv("ANSWER_LIMIT")}字，并请保持回答简洁。
+        如果你不知道答案，直接返回“未能根据搜索结果生成回答”。
         问题：{query}
         文档：{doc_texts}
         回答：
