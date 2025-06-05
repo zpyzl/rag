@@ -25,13 +25,13 @@ REFINE_FACTOR = 30
 retriever = AsyncInferenceClient(model="http://39.170.17.192:9100" + "/embed")
 reranker = AsyncInferenceClient(model="http://localhost:45481" + "/rerank")
 
-db = lancedb.connect("/usr/src/.lancedb")
-tbl = db.open_table("several_docs")
+# db = lancedb.connect("/usr/src/.lancedb")
+# tbl = db.open_table("several_docs")
 
 TOP_K_RANK = int(4)
 TOP_K_RETRIEVE = int(20)
 
-async def retrieve_docs(query: str, k: int, filenames_not_in: list[str] = None):
+async def retrieve_docs(table, query: str, k: int, filenames_not_in: list[str] = None):
     """
         Retrieve top k items with RETRIEVER
         """
@@ -50,11 +50,11 @@ async def retrieve_docs(query: str, k: int, filenames_not_in: list[str] = None):
         filenames_str = "\'"
         filenames_str += "\',\'".join([filename for filename in filenames_not_in])
         filenames_str += "\'"
-        documents = tbl.search(
+        documents = table.search(
             query=query_vec
         ).where(f"filename NOT IN ({filenames_str})").nprobes(NPROBES).refine_factor(REFINE_FACTOR).limit(k).to_list()
     else:
-        documents = tbl.search(
+        documents = table.search(
             query=query_vec
         ).nprobes(NPROBES).refine_factor(REFINE_FACTOR).limit(k).to_list()
     # param = {
@@ -132,8 +132,8 @@ def ollama_gen_print(query, docs: list[str]):
     else:
         print(f"Failed to retrieve data: {response.status_code}")
 
-def query_list(query,filenames_not_in = None):
-    retrieved_docs = asyncio.run(retrieve_docs(query, TOP_K_RETRIEVE,filenames_not_in))
+def query_list(table, query,filenames_not_in = None):
+    retrieved_docs = asyncio.run(retrieve_docs(table, query, TOP_K_RETRIEVE,filenames_not_in))
     # 注意这个方法被用作重复调用去重！！！
     # documents = asyncio.run(rerank(query1, retrieved_docs, TOP_K_RANK))
     # pprint(documents)

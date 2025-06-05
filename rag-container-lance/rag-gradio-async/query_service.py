@@ -5,6 +5,7 @@ import sys
 from pathlib import Path
 import uuid
 
+import lancedb
 import requests
 from dotenv import load_dotenv
 from flask import Flask, request, jsonify, send_file, Response, stream_with_context
@@ -13,6 +14,7 @@ from flask_cors import CORS
 
 from backend.semantic_search import query_list, ollama_gen, TOP_K_RETRIEVE, get_prompt_by_docs
 from log_utils import setup_log
+from embed_and_index import vectorize_file, schema
 
 load_dotenv()
 
@@ -100,13 +102,14 @@ def query_documents():
     try:
         query = request.args.get('query', type=str)
         logger.info(f"检索问题：{query}")
-        docs = query_unique_docs(query)
+        tbl = get_connect_db_table()
+        docs = query_unique_docs(query, tbl)
         return jsonify({"code": 200, "msg": 'ok', "data": docs})
     except Exception as e:
         logger.exception(e)
 
-def query_unique_docs(query):
-    docs = query_list(query)
+def query_unique_docs(query, table):
+    docs = query_list(table, query)
     unique_docs = distinct(docs)
     while len(unique_docs) < TOP_K_RETRIEVE:
         existing_filenames = [d['filename'] for d in unique_docs]
@@ -145,6 +148,24 @@ def get_file():
         return jsonify({"code": 200, "msg": 'ok', "data": filepath})
     else:
         return send_file( filepath)
+
+@app.route('/vectorize', methods=['GET'])
+def vectorize():
+    try:
+        file_path = request.args.get('file_path', type=str)
+        tbl = get_connect_db_table()
+        vectorize_file(file_path, tbl)
+        return jsonify({"code": 200, "msg": 'ok'})
+    except Exception as e:
+        logger.exception(e)
+
+def get_connect_db_table():
+    db_path = request.args.get('db_path', type=str)
+    table_name = request.args.get('table_name', type=str)
+    db = lancedb.connect(db_path)
+    tbl = db.create_table(table_name, schema=schema, mode="overwrite")
+    return tbl
+
 
 if __name__ == '__main__':
     app.run("0.0.0.0",port=5003)
