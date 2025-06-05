@@ -9,7 +9,6 @@ import lancedb
 import requests
 from dotenv import load_dotenv
 from flask import Flask, request, jsonify, send_file, Response, stream_with_context
-from flask_caching import Cache
 from flask_cors import CORS
 
 from backend.semantic_search import query_list, ollama_gen, TOP_K_RETRIEVE, get_prompt_by_docs
@@ -19,14 +18,9 @@ from embed_and_index import vectorize_file, schema
 load_dotenv()
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-config = {
-    "CACHE_TYPE": "SimpleCache",  # Flask-Caching related configs
-    "CACHE_DEFAULT_TIMEOUT": 300
-}
 
 app = Flask(__name__)
 app.config.from_mapping(config)
-cache = Cache(app)
 
 CORS(app, resources=r'/*')
 logger = setup_log('query_service.log',True)
@@ -129,17 +123,17 @@ def query_unique_docs(query, table):
     return  docs
 
 
-@app.route('/llm_answer', methods=['GET'])
-def llm_answer():
-    try:
-        query = request.args.get('query', type=str)
-        docs_id = request.args.get('docs_id', type=str)
-        docs = cache.get(docs_id)
-        cache.clear()
-        res = ollama_gen(query, docs, False)
-        return jsonify({"code": 200, "msg": 'ok', "data": json.loads(res.text)['response']})
-    except Exception as e:
-        logger.exception(e)
+# @app.route('/llm_answer', methods=['GET'])
+# def llm_answer():
+#     try:
+#         query = request.args.get('query', type=str)
+#         docs_id = request.args.get('docs_id', type=str)
+#         docs = cache.get(docs_id)
+#         cache.clear()
+#         res = ollama_gen(query, docs, False)
+#         return jsonify({"code": 200, "msg": 'ok', "data": json.loads(res.text)['response']})
+#     except Exception as e:
+#         logger.exception(e)
 
 @app.route('/get_file', methods=['GET'])
 def get_file():
