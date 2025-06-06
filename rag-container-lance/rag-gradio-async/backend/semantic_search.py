@@ -54,16 +54,16 @@ async def retrieve_docs(table, query: str, k: int, filenames_not_in: list[str] =
     """
         Retrieve top k items with RETRIEVER
         """
-    resp = await retriever.post(
-        json={
-            "inputs": query,
-            "truncate": True
-        }
-    )
+    # resp = await retriever.post(
+    #     json={
+    #         "inputs": query,
+    #         "truncate": True
+    #     }
+    # )
     try:
         query_vec = emb([query])[0]
     except:
-        raise RuntimeError(resp.decode())
+        raise RuntimeError("emb error")
 
     if filenames_not_in:
         filenames_str = "\'"
