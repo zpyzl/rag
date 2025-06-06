@@ -130,6 +130,6 @@ def req_chunk(files):
 
 
 if __name__ == "__main__":
-    embed_and_index(db_path='/usr/src/.lancedb',table_name='several_docs',
-                    dir_path=r'C:\\tmp\\test_rag_doc\\several_docs\\doc', file_path=None,create_or_append='a')
+    embed_and_index(db_path='/usr/src/.lancedb',table_name='several_docs2',
+                    dir_path=r'C:\\tmp\\test_rag_doc\\several_docs\\1file', file_path=None, create_or_append='c')
 

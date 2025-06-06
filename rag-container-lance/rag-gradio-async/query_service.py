@@ -96,12 +96,12 @@ def query_documents():
         query = request.args.get('query', type=str)
         logger.info(f"检索问题：{query}")
         tbl = get_connect_db_table()
-        docs = query_unique_docs(query, tbl)
+        docs = query_docs(query, tbl)
         return jsonify({"code": 200, "msg": 'ok', "data": docs})
     except Exception as e:
         logger.exception(e)
 
-def query_unique_docs(query, table):
+def query_docs(query, table):
     docs = query_list(table, query)
 
     for doc in docs:
@@ -147,7 +147,8 @@ def get_connect_db_table():
     table_name = request.args.get('table_name', type=str)
     logger.info(f"db_path: {db_path}, table_name: {table_name}")
     db = lancedb.connect(db_path)
-    tbl = db.create_table(table_name, schema=schema, mode="overwrite")
+    tbl = db.open_table(table_name)
+    logger.info(f"rows: {tbl.count_rows()}")
     return tbl
 
 
