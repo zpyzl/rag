@@ -143,7 +143,7 @@ def vectorize():
         logger.exception(e)
 
 @app.route('/create_table', methods=['GET'])
-def vectorize():
+def create_table():
     try:
         db_path = request.args.get('db_path', type=str)
         table_name = request.args.get('table_name', type=str)
