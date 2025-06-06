@@ -16,7 +16,7 @@ from log_utils import setup_log
 import argparse
 
 from FileChunk import FileChunk
-from backend.embV2 import emb
+from backend.semantic_search import emb
 
 # 加载 .env 文件
 load_dotenv()
