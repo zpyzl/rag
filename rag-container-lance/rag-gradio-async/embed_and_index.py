@@ -16,6 +16,7 @@ from log_utils import setup_log
 import argparse
 
 from FileChunk import FileChunk
+from backend.embV2 import emb
 
 # 加载 .env 文件
 load_dotenv()
@@ -96,15 +97,8 @@ def vectorize_file(file, tbl):
     file_chunks = req_chunk(loaded_files)
     for j in range(int(np.ceil(len(file_chunks) / BATCH_SIZE))):
         file_chunk_batch = file_chunks[j * BATCH_SIZE:(j + 1) * BATCH_SIZE]
-        payload = {
-            "inputs": [file_chunk.chunk for file_chunk in file_chunk_batch],  # texts: list of str
-            "truncate": True
-        }
 
-        resp = requests.post(TEI_URL, json=payload, headers=HEADERS)
-        if resp.status_code != 200:
-            raise RuntimeError(f"failed call embedding for {file.resolve()}")
-        vectors = resp.json()
+        vectors = emb([file_chunk.chunk for file_chunk in file_chunk_batch])
 
         data = [
             {"vector": vec, "filename": file_chunk.filename, "filepath": file_chunk.filepath, "text": file_chunk.chunk}

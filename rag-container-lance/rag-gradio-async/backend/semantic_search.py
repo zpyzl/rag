@@ -69,6 +69,10 @@ async def retrieve_docs(table, query: str, k: int, filenames_not_in: list[str] =
         doc['vector'] = ''
     return documents
 
+
+
+
+
 async def retrieve(query: str, k: int) -> list[str]:
     documents = await retrieve_docs(query, k)
     documents = [doc[TEXT_COLUMN] for doc in documents]
