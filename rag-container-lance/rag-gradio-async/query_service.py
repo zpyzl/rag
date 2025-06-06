@@ -103,17 +103,7 @@ def query_documents():
 
 def query_unique_docs(query, table):
     docs = query_list(table, query)
-    unique_docs = distinct(docs)
-    while len(unique_docs) < TOP_K_RETRIEVE:
-        existing_filenames = [d['filename'] for d in unique_docs]
-        more_docs = query_list(query, existing_filenames)
-        if not more_docs:
-            break
-        # 更多去重文件 = 去重（更多文件）
-        more_docs = distinct(more_docs)
-        # 已有去重文件+=更多去重文件
-        unique_docs.extend(more_docs)
-    docs = unique_docs[:TOP_K_RETRIEVE]
+
     for doc in docs:
         doc['type'] = Path(doc['filepath']).suffix
 
