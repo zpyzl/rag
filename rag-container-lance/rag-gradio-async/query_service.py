@@ -111,11 +111,11 @@ def get_file():
 @app.route('/query_documents', methods=['GET','POST'])
 def query_documents():
     try:
-        query = request.args.get('query', type=str)
-        org_id = request.args.get('org_id', type=str)
-        person_id = request.args.get('person_id', type=str)
-        secret_level = request.args.get('secret_level', type=str)
-        logger.info(f"查询参数：{request.args}")
+        query = request.json.get('query', type=str)
+        org_id = request.json.get('org_id', type=str)
+        person_id = request.json.get('person_id', type=str)
+        secret_level = request.json.get('secret_level', type=str)
+        logger.info(f"查询参数：{request.json}")
         docs = query_docs(query, tbl, org_id, person_id, secret_level)
         return jsonify({"code": 200, "msg": 'ok', "data": docs})
     except Exception as e:
