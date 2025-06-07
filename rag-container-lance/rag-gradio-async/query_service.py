@@ -122,7 +122,7 @@ def query_documents():
         logger.exception(e)
 
 
-@app.route('/vectorize', methods=['GET'])
+@app.route('/vectorize', methods=['POST'])
 def vectorize():
     try:
         file_name = request.json.get("file_name")
