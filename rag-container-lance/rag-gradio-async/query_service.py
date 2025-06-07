@@ -108,13 +108,13 @@ def get_file():
     else:
         return send_file( filepath)
 
-@app.route('/query_documents', methods=['GET','POST'])
+@app.route('/query_documents', methods=['POST'])
 def query_documents():
     try:
-        query = request.json.get('query', type=str)
-        org_id = request.json.get('org_id', type=str)
-        person_id = request.json.get('person_id', type=str)
-        secret_level = request.json.get('secret_level', type=str)
+        query = request.json.get('query')
+        org_id = request.json.get('org_id')
+        person_id = request.json.get('person_id')
+        secret_level = request.json.get('secret_level')
         logger.info(f"查询参数：{request.json}")
         docs = query_docs(query, tbl, org_id, person_id, secret_level)
         return jsonify({"code": 200, "msg": 'ok', "data": docs})
