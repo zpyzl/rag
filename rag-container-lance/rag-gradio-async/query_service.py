@@ -4,6 +4,7 @@ import re
 import sys
 from pathlib import Path
 import uuid
+import pyarrow as pa
 
 import lancedb
 import requests
@@ -189,7 +190,18 @@ def create_table():
         db_path = request.args.get('db_path', type=str)
         table_name = request.args.get('table_name', type=str)
         db = lancedb.connect(db_path)
-        db.create_table(table_name, schema=schema)
+        new_schema = pa.schema(
+            [
+                pa.field("vector", pa.list_(pa.float32(), 1024)),
+                pa.field("filename", pa.string()),
+                pa.field("filepath", pa.string()),
+                pa.field("text", pa.string()),
+                pa.field("org_list", pa.string()),
+                pa.field("person_list", pa.string()),
+                pa.field("secret_level", pa.string())
+            ]
+        )
+        db.create_table(table_name, schema=new_schema)
         return jsonify({"code": 200, "msg": 'ok'})
     except Exception as e:
         logger.exception(e)

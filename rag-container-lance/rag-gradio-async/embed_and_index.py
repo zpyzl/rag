@@ -45,17 +45,7 @@ schema = pa.schema(
     ]
 )
 
-new_schema = pa.schema(
-    [
-        pa.field("vector", pa.list_(pa.float32(), EMB_DIM)),
-        pa.field("filename", pa.string()),
-        pa.field("filepath", pa.string()),
-        pa.field("text", pa.string()),
-        pa.field("org_list", pa.string()),
-        pa.field("person_list", pa.string()),
-        pa.field("secret_level", pa.string())
-    ]
-)
+
 
 def embed_and_index(db_path, table_name, dir_path, file_path=None, create_or_append='c', breakpoint_filename=None):
     db = lancedb.connect(db_path)
