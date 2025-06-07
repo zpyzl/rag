@@ -154,7 +154,7 @@ def vectorize_org_person_file(file_name, file_path, org_list, person_list, secre
 
 
 def do_query_by_filename(file_name):
-    data = tbl.search().where(f"file_name = '{file_name}'").to_list()
+    data = tbl.search().where(f"filename = '{file_name}'").to_list()
     if data:
         # 去重
         unique_data = []
