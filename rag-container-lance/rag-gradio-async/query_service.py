@@ -122,14 +122,14 @@ def query_documents():
         logger.exception(e)
 
 
-@app.route('/vectorize', methods=['GET'])
+@app.route('/vectorize', methods=['POST'])
 def vectorize():
     try:
         file_name = request.json.get("file_name")
         file_path = request.json.get("file_path")
         org_list = request.json.get('org_list')
-        person_list = request.args.get('person_list')
-        secret_level = request.args.get('secret_level')
+        person_list = request.json.get('person_list')
+        secret_level = request.json.get('secret_level')
         logger.info(f"vectorize：{request.json}")
         vectorize_org_person_file(file_name, file_path, org_list, person_list, secret_level)
         return jsonify({"code": 200, "msg": 'ok'})
