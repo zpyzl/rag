@@ -13,7 +13,7 @@ from flask_cors import CORS
 
 from backend.semantic_search import query_list, ollama_gen, TOP_K_RETRIEVE, get_prompt_by_docs
 from log_utils import setup_log
-from embed_and_index import vectorize_file, schema
+from embed_and_index import vectorize_file, schema,vectorize_secret_file
 
 load_dotenv()
 
@@ -150,7 +150,7 @@ def vectorize_org_person_file(file_name, file_path, org_list, person_list, secre
             logger.info("add existing_data")
             tbl.add(existing_data)
         else: # 不存在，做向量化
-            vectorize_file(Path(file_path), tbl, org_list, person_list, secret_level)
+            vectorize_secret_file(Path(file_path), tbl, org_list, person_list, secret_level)
     else:
         raise RuntimeError("failed to query old vec db!")
 

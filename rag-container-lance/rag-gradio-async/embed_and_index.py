@@ -98,7 +98,11 @@ def embed_and_index(db_path, table_name, dir_path, file_path=None, create_or_app
         tbl.create_index(vector_column_name='vector',num_partitions=NUM_PARTITIONS, num_sub_vectors=NUM_SUB_VECTORS)
 
 
-def vectorize_file(file, tbl, org_list=None, person_list=None, secret_level=None):
+def vectorize_secret_file(file, tbl, org_list, person_list, secret_level):
+    return vectorize_file(file, tbl, True, org_list, person_list, secret_level)
+
+
+def vectorize_file(file, tbl, if_secret=False, org_list=None, person_list=None, secret_level=None):
     file_loader_resp = requests.post("http://localhost:5000/load_file",
                                      json={'file_path': str(file.resolve())}).json()
     loaded_files = file_loader_resp['data']
@@ -119,7 +123,7 @@ def vectorize_file(file, tbl, org_list=None, person_list=None, secret_level=None
             raise RuntimeError(f"failed call embedding for {file.resolve()}")
         vectors = resp.json()
 
-        if secret_level or org_list or person_list:
+        if if_secret:
             data = [
                 {"vector": vec, "filename": file_chunk.filename, "filepath": file_chunk.filepath,
                  "text": file_chunk.chunk,
