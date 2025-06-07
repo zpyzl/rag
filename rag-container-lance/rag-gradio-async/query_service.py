@@ -94,7 +94,6 @@ def intent_recog():
 def distinct(docs):
     return list({d['filename']: d for d in docs}.values())
 
-
 def query_docs(query, table):
     docs = query_list(table, query)
     for doc in docs:
@@ -113,8 +112,10 @@ def get_file():
 def query_documents():
     try:
         query = request.args.get('query', type=str)
-        logger.info(f"检索问题：{query}")
-        tbl = get_connect_db_table()
+        org_id = request.args.get('org_id', type=str)
+        person_id = request.args.get('person_id', type=str)
+        secret_level = request.args.get('secret_level', type=str)
+        logger.info(f"查询参数：{request.args}")
         docs = query_docs(query, tbl)
         return jsonify({"code": 200, "msg": 'ok', "data": docs})
     except Exception as e:

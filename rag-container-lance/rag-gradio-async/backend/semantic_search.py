@@ -31,10 +31,7 @@ reranker = AsyncInferenceClient(model="http://localhost:45481" + "/rerank")
 TOP_K_RANK = int(4)
 TOP_K_RETRIEVE = int(20)
 
-async def retrieve_docs(table, query: str, k: int, filenames_not_in: list[str] = None):
-    """
-        Retrieve top k items with RETRIEVER
-        """
+async def retrieve_docs(table, query: str, k: int, org_id, person_id, secret_level):
     resp = await retriever.post(
         json={
             "inputs": query,
@@ -46,25 +43,23 @@ async def retrieve_docs(table, query: str, k: int, filenames_not_in: list[str] =
     except:
         raise RuntimeError(resp.decode())
 
-    if filenames_not_in:
-        filenames_str = "\'"
-        filenames_str += "\',\'".join([filename for filename in filenames_not_in])
-        filenames_str += "\'"
-        documents = table.search(
-            query=query_vec
-        ).where(f"filename NOT IN ({filenames_str})").nprobes(NPROBES).refine_factor(REFINE_FACTOR).limit(k).to_list()
+    org_cond = "org_list like '%{org_id}%'"
+    person_cond = "person_list like '%{person_id}%'"
+    if org_id and person_id: # 部门、人都有
+        org_person_cond = f"( {org_cond} OR {person_cond}) AND"
+    elif org_id:
+        org_person_cond = f"{org_cond} AND"
+    elif person_id:
+        org_person_cond = f"{person_cond} AND"
     else:
-        documents = table.search(
-            query=query_vec
-        ).nprobes(NPROBES).refine_factor(REFINE_FACTOR).limit(k).to_list()
-    # param = {
-    #     "vec": query_vec,
-    #     "filenames_not_in": filenames_not_in
-    # }
-    # print(query_vec)
-    # r = requests.post("http://localhost:5004/search",json=param)
-    # rjson = json.loads(r.text)
-    # documents = rjson['data']
+        org_person_cond = ""
+
+    documents = (table.search(
+        query=query_vec
+    )
+                 .where(f" {org_person_cond} secret_level='{secret_level}'")
+                 .nprobes(NPROBES).refine_factor(REFINE_FACTOR).limit(k).to_list())
+
     for doc in documents:
         doc['vector'] = ''
     return documents
@@ -133,7 +128,7 @@ def ollama_gen_print(query, docs: list[str]):
         print(f"Failed to retrieve data: {response.status_code}")
 
 def query_list(table, query,filenames_not_in = None):
-    retrieved_docs = asyncio.run(retrieve_docs(table, query, TOP_K_RETRIEVE,filenames_not_in))
+    retrieved_docs = asyncio.run(retrieve_docs(table, query, TOP_K_RETRIEVE))
     # 注意这个方法被用作重复调用去重！！！
     # documents = asyncio.run(rerank(query1, retrieved_docs, TOP_K_RANK))
     # pprint(documents)
