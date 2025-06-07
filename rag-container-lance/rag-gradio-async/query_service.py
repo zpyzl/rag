@@ -148,7 +148,7 @@ def create_table():
         db_path = request.args.get('db_path', type=str)
         table_name = request.args.get('table_name', type=str)
         db = lancedb.connect(db_path)
-        db.create_table(table_name, schema=schema, mode="overwrite")
+        db.create_table(table_name, schema=schema)
         return jsonify({"code": 200, "msg": 'ok'})
     except Exception as e:
         logger.exception(e)
@@ -158,7 +158,10 @@ def get_connect_db_table():
     table_name = request.args.get('table_name', type=str)
     logger.info(f"db_path: {db_path}, table_name: {table_name}")
     db = lancedb.connect(db_path)
-    tbl = db.open_table(table_name)
+    try:
+        tbl = db.open_table(table_name)
+    except FileNotFoundError as e:
+        tbl = db.create_table(table_name, schema=schema)
     logger.info(f"rows: {tbl.count_rows()}")
     return tbl
 
