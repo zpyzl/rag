@@ -119,13 +119,14 @@ def vectorize_file(file, tbl, org_list=None, person_list=None, secret_level=None
             raise RuntimeError(f"failed call embedding for {file.resolve()}")
         vectors = resp.json()
 
-        if secret_level:
+        if secret_level or org_list or person_list:
             data = [
                 {"vector": vec, "filename": file_chunk.filename, "filepath": file_chunk.filepath,
                  "text": file_chunk.chunk,
                  "org_list": org_list, "person_list": person_list, "secret_level": secret_level}
                 for vec, file_chunk in zip(vectors, file_chunk_batch)
             ]
+            return data
         else:
             data = [
                 {"vector": vec, "filename": file_chunk.filename, "filepath": file_chunk.filepath, "text": file_chunk.chunk}
