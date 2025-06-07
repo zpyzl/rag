@@ -24,10 +24,10 @@ app = Flask(__name__)
 CORS(app, resources=r'/*')
 logger = setup_log('query_service.log',True)
 
-db = lancedb.connect("/usr/src/.lancedb")
-tbl = db.open_table("org_docs")
+db = lancedb.connect(sys.argv[1])
+tbl = db.open_table(sys.argv[2])
 OLD_DB_SERVICE_URL = "http://localhost:4003/query_by_filename"
-PORT=sys.argv[1]
+PORT=sys.argv[3]
 
 def call_completions(param):
     response = requests.post("http://39.175.132.230:35191/v1/chat/completions",
