@@ -153,7 +153,7 @@ def vectorize_org_person_file(file_name, file_path, org_list, person_list, secre
         raise RuntimeError("failed to query old vec db!")
 
 
-def query_by_filename(file_name):
+def do_query_by_filename(file_name):
     data = tbl.search().where(f"file_name = '{file_name}'").to_list()
     if data:
         # 去重
@@ -174,7 +174,7 @@ def query_by_filename():
     try:
         file_name = request.args.get('file_name', type=str)
         logger.info(f"文件名：{file_name}")
-        docs = query_by_filename(file_name)
+        docs = do_query_by_filename(file_name)
         return jsonify({"code": 200, "msg": 'ok', "data": docs})
     except Exception as e:
         logger.exception(e)
