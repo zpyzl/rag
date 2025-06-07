@@ -24,9 +24,10 @@ app = Flask(__name__)
 CORS(app, resources=r'/*')
 logger = setup_log('query_service.log',True)
 
-db = lancedb.connect("")
-tbl = db.open_table("")
-OLD_DB_SERVICE_URL = "http:///query_by_filename"
+db = lancedb.connect("/usr/src/.lancedb")
+tbl = db.open_table("org_docs")
+OLD_DB_SERVICE_URL = "http://localhost:4003/query_by_filename"
+PORT=5003
 
 def call_completions(param):
     response = requests.post("http://39.175.132.230:35191/v1/chat/completions",
@@ -189,4 +190,4 @@ def create_table():
         logger.exception(e)
 
 if __name__ == '__main__':
-    app.run("0.0.0.0",port=5003)
+    app.run("0.0.0.0",port=PORT)
