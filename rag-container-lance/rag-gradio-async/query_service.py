@@ -27,7 +27,7 @@ logger = setup_log('query_service.log',True)
 db = lancedb.connect("/usr/src/.lancedb")
 tbl = db.open_table("org_docs")
 OLD_DB_SERVICE_URL = "http://localhost:4003/query_by_filename"
-PORT=5003
+PORT=sys.argv[1]
 
 def call_completions(param):
     response = requests.post("http://39.175.132.230:35191/v1/chat/completions",
