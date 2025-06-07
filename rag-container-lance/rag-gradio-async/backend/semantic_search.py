@@ -127,8 +127,8 @@ def ollama_gen_print(query, docs: list[str]):
     else:
         print(f"Failed to retrieve data: {response.status_code}")
 
-def query_list(table, query,filenames_not_in = None):
-    retrieved_docs = asyncio.run(retrieve_docs(table, query, TOP_K_RETRIEVE))
+def query_list(table, query, org_id, person_id, secret_level):
+    retrieved_docs = asyncio.run(retrieve_docs(table, query, TOP_K_RETRIEVE, org_id, person_id, secret_level))
     # 注意这个方法被用作重复调用去重！！！
     # documents = asyncio.run(rerank(query1, retrieved_docs, TOP_K_RANK))
     # pprint(documents)
