@@ -24,6 +24,9 @@ app = Flask(__name__)
 CORS(app, resources=r'/*')
 logger = setup_log('query_service.log',True)
 
+db = lancedb.connect("")
+tbl = db.open_table("")
+OLD_DB_SERVICE_URL = "http:///query_by_filename"
 
 def call_completions(param):
     response = requests.post("http://39.175.132.230:35191/v1/chat/completions",
@@ -90,6 +93,21 @@ def intent_recog():
 def distinct(docs):
     return list({d['filename']: d for d in docs}.values())
 
+
+def query_docs(query, table):
+    docs = query_list(table, query)
+    for doc in docs:
+        doc['type'] = Path(doc['filepath']).suffix
+    return  docs
+
+@app.route('/get_file', methods=['GET'])
+def get_file():
+    filepath = request.args.get('filepath', type=str)
+    if filepath.startswith("http://"):
+        return jsonify({"code": 200, "msg": 'ok', "data": filepath})
+    else:
+        return send_file( filepath)
+
 @app.route('/query_documents', methods=['GET','POST'])
 def query_documents():
     try:
@@ -101,46 +119,63 @@ def query_documents():
     except Exception as e:
         logger.exception(e)
 
-def query_docs(query, table):
-    docs = query_list(table, query)
-
-    for doc in docs:
-        doc['type'] = Path(doc['filepath']).suffix
-
-    # docs_id = uuid.uuid4()
-    # cache.set(docs_id, docs)
-    return  docs
-
-
-# @app.route('/llm_answer', methods=['GET'])
-# def llm_answer():
-#     try:
-#         query = request.args.get('query', type=str)
-#         docs_id = request.args.get('docs_id', type=str)
-#         docs = cache.get(docs_id)
-#         cache.clear()
-#         res = ollama_gen(query, docs, False)
-#         return jsonify({"code": 200, "msg": 'ok', "data": json.loads(res.text)['response']})
-#     except Exception as e:
-#         logger.exception(e)
-
-@app.route('/get_file', methods=['GET'])
-def get_file():
-    filepath = request.args.get('filepath', type=str)
-    if filepath.startswith("http://"):
-        return jsonify({"code": 200, "msg": 'ok', "data": filepath})
-    else:
-        return send_file( filepath)
 
 @app.route('/vectorize', methods=['GET'])
 def vectorize():
     try:
-        file_path = request.args.get('file_path', type=str)
-        tbl = get_connect_db_table()
-        vectorize_file(Path(file_path), tbl)
+        file_name = request.json.get("file_name")
+        file_path = request.json.get("file_path")
+        org_list = request.json.get('org_list')
+        person_list = request.args.get('person_list')
+        secret_level = request.args.get('secret_level')
+        vectorize_org_person_file(file_name, file_path, org_list, person_list, secret_level)
         return jsonify({"code": 200, "msg": 'ok'})
     except Exception as e:
         logger.exception(e)
+
+def vectorize_org_person_file(file_name, file_path, org_list, person_list, secret_level):
+    # 查询旧库是否存在。如果文件名存在，已经向量化了
+    resp = requests.get(OLD_DB_SERVICE_URL, params={"file_name": file_name})  # 查询旧向量库服务
+    logger.info(f"query old db resp:{resp.status_code}")
+    if resp.status_code == 200:
+        existing_data = resp.json()['data']
+        if existing_data:
+            existing_data['org_list'] = org_list
+            existing_data['person_list'] = person_list
+            existing_data['secret_level'] = secret_level
+            tbl.add(existing_data)
+        else: # 不存在，做向量化
+            vectorize_file(Path(file_path), tbl, org_list, person_list, secret_level)
+    else:
+        raise RuntimeError("failed to query old vec db!")
+
+
+def query_by_filename(file_name):
+    data = tbl.search().where(f"file_name = '{file_name}'").to_list()
+    if data:
+        # 去重
+        unique_data = []
+        seen_id = set()
+        for entry in data:
+            identifier = entry["text"]
+            if identifier not in seen_id:
+                unique_data.append(entry)
+                seen_id.add(identifier)
+        return unique_data
+    else:
+        return []
+
+
+@app.route('/query_by_filename', methods=['GET'])
+def query_by_filename():
+    try:
+        file_name = request.args.get('file_name', type=str)
+        logger.info(f"文件名：{file_name}")
+        docs = query_by_filename(file_name)
+        return jsonify({"code": 200, "msg": 'ok', "data": docs})
+    except Exception as e:
+        logger.exception(e)
+
 
 @app.route('/create_table', methods=['GET'])
 def create_table():
@@ -152,19 +187,6 @@ def create_table():
         return jsonify({"code": 200, "msg": 'ok'})
     except Exception as e:
         logger.exception(e)
-
-def get_connect_db_table():
-    db_path = request.args.get('db_path', type=str)
-    table_name = request.args.get('table_name', type=str)
-    logger.info(f"db_path: {db_path}, table_name: {table_name}")
-    db = lancedb.connect(db_path)
-    try:
-        tbl = db.open_table(table_name)
-    except FileNotFoundError as e:
-        tbl = db.create_table(table_name, schema=schema)
-    logger.info(f"rows: {tbl.count_rows()}")
-    return tbl
-
 
 if __name__ == '__main__':
     app.run("0.0.0.0",port=5003)

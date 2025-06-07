@@ -45,6 +45,18 @@ schema = pa.schema(
     ]
 )
 
+new_schema = pa.schema(
+    [
+        pa.field("vector", pa.list_(pa.float32(), EMB_DIM)),
+        pa.field("filename", pa.string()),
+        pa.field("filepath", pa.string()),
+        pa.field("text", pa.string()),
+        pa.field("org_list", pa.string()),
+        pa.field("person_list", pa.string()),
+        pa.field("secret_level", pa.string())
+    ]
+)
+
 def embed_and_index(db_path, table_name, dir_path, file_path=None, create_or_append='c', breakpoint_filename=None):
     db = lancedb.connect(db_path)
     TABLE_NAME = table_name
@@ -86,7 +98,7 @@ def embed_and_index(db_path, table_name, dir_path, file_path=None, create_or_app
         tbl.create_index(vector_column_name='vector',num_partitions=NUM_PARTITIONS, num_sub_vectors=NUM_SUB_VECTORS)
 
 
-def vectorize_file(file, tbl):
+def vectorize_file(file, tbl, org_list=None, person_list=None, secret_level=None):
     file_loader_resp = requests.post("http://localhost:5000/load_file",
                                      json={'file_path': str(file.resolve())}).json()
     loaded_files = file_loader_resp['data']
@@ -107,12 +119,18 @@ def vectorize_file(file, tbl):
             raise RuntimeError(f"failed call embedding for {file.resolve()}")
         vectors = resp.json()
 
-        data = [
-            {"vector": vec, "filename": file_chunk.filename, "filepath": file_chunk.filepath, "text": file_chunk.chunk}
-            for vec, file_chunk in zip(vectors, file_chunk_batch)
-        ]
-        # tbl.create_fts_index()
-        # print(data)################# DEBUG
+        if secret_level:
+            data = [
+                {"vector": vec, "filename": file_chunk.filename, "filepath": file_chunk.filepath,
+                 "text": file_chunk.chunk,
+                 "org_list": org_list, "person_list": person_list, "secret_level": secret_level}
+                for vec, file_chunk in zip(vectors, file_chunk_batch)
+            ]
+        else:
+            data = [
+                {"vector": vec, "filename": file_chunk.filename, "filepath": file_chunk.filepath, "text": file_chunk.chunk}
+                for vec, file_chunk in zip(vectors, file_chunk_batch)
+            ]
         tbl.add(data=data)
 
     logger.info("after vectorize")
@@ -134,5 +152,5 @@ def req_chunk(files):
 
 if __name__ == "__main__":
     embed_and_index(db_path='/usr/src/.lancedb',table_name='several_docs2',
-                    dir_path=r'C:\\tmp\\test_rag_doc\\several_docs\\1file', file_path=None, create_or_append='c')
+                    dir_path=r'C:\\tmp\\test_rag_doc\\several_docs\\doc', file_path=None, create_or_append='a')
 
