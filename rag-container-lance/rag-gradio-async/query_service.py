@@ -138,7 +138,8 @@ def vectorize():
 
 def vectorize_org_person_file(file_name, file_path, org_list, person_list, secret_level):
     # 查询旧库是否存在。如果文件名存在，已经向量化了
-    resp = requests.get(OLD_DB_SERVICE_URL, params={"file_name": file_name})  # 查询旧向量库服务
+    filename_prefix = file_name.split('.')[0]
+    resp = requests.get(OLD_DB_SERVICE_URL, params={"file_name": filename_prefix})  # 查询旧向量库服务
     logger.info(f"old db resp:{resp.status_code}")
     if resp.status_code == 200:
         existing_data = resp.json()['data']
