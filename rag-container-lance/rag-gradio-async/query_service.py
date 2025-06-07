@@ -144,10 +144,11 @@ def vectorize_org_person_file(file_name, file_path, org_list, person_list, secre
     if resp.status_code == 200:
         existing_data = resp.json()['data']
         if existing_data:
-            existing_data['org_list'] = org_list
-            existing_data['person_list'] = person_list
-            existing_data['secret_level'] = secret_level
             logger.info("add existing_data")
+            for row in existing_data:
+                row['org_list'] = org_list
+                row['person_list'] = person_list
+                row['secret_level'] = secret_level
             tbl.add(existing_data)
         else: # 不存在，做向量化
             vectorize_secret_file(Path(file_path), tbl, org_list, person_list, secret_level)
