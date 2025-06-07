@@ -94,6 +94,7 @@ def vectorize_file(file, tbl):
     if file_loader_resp['code'] != 200:
         raise Exception(f"file load error: {file_loader_resp['code']}")
     file_chunks = req_chunk(loaded_files)
+    logger.info(f"chunks: {len(file_chunks)}")
     for j in range(int(np.ceil(len(file_chunks) / BATCH_SIZE))):
         file_chunk_batch = file_chunks[j * BATCH_SIZE:(j + 1) * BATCH_SIZE]
         payload = {
@@ -113,6 +114,8 @@ def vectorize_file(file, tbl):
         # tbl.create_fts_index()
         # print(data)################# DEBUG
         tbl.add(data=data)
+
+    logger.info("after vectorize")
 
 
 def req_chunk(files):
