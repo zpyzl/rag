@@ -120,7 +120,6 @@ def vectorize_file(file, tbl, if_secret=False, org_list=None, person_list=None, 
                  "org_list": org_list, "person_list": person_list, "secret_level": secret_level}
                 for vec, file_chunk in zip(vectors, file_chunk_batch)
             ]
-            return data
         else:
             data = [
                 {"vector": vec, "filename": file_chunk.filename, "filepath": file_chunk.filepath, "text": file_chunk.chunk}
@@ -128,7 +127,7 @@ def vectorize_file(file, tbl, if_secret=False, org_list=None, person_list=None, 
             ]
         tbl.add(data=data)
 
-    logger.info("after vectorize")
+    logger.info("after add vectorized")
 
 
 def req_chunk(files):
