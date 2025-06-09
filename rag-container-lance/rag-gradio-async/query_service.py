@@ -27,7 +27,7 @@ logger = setup_log('query_service.log',True)
 
 db = lancedb.connect(sys.argv[1])
 tbl = db.open_table(sys.argv[2])
-OLD_DB_SERVICE_URL = "http://localhost:4003/query_by_filename"
+OLD_DB_SERVICE_URL = "http://123.60.191.71:4003/query_by_filename"
 PORT=sys.argv[3]
 
 def call_completions(param):
